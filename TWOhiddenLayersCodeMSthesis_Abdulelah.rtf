@@ -1,444 +1,438 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1343\cocoasubrtf140
-{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-\margl1440\margr1440\vieww17940\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % All the code and data were taken and written by: Abdulelah Alkhoraif (eng.v400@gmail.com) , Oct. 2015      %%%
+%% After downloading the file (MS_thesis_Abdulelah_2015_data_and_code), make sure to move all                    %%%
+%% the collecting data: (WRIMallDATA30patternsMotorA.mat),(WRIMallDATA40patternsMotorAandB.mat),          %%%
+%% (SCIMallDATA30patternsMotorC.mat), and ('DATAmotorA68patterns500msecond.mat') to (MATLAB) file in    %%%
+%%  your computer.    Code for Two Hidden Layers                                                                                                   %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\f0\fs24 \cf0 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
-% % All the code and data were taken and written by: Abdulelah Alkhoraif (eng.v400@gmail.com) , Oct. 2015      %%%\
-%% After downloading the file (MS_thesis_Abdulelah_2015_data_and_code), make sure to move all                    %%%\
-%% the collecting data: (WRIMallDATA30patternsMotorA.mat),(WRIMallDATA40patternsMotorAandB.mat),          %%%\
-%% (SCIMallDATA30patternsMotorC.mat), and ('DATAmotorA68patterns500msecond.mat') to (MATLAB) file in    %%%\
-%%  your computer.    Code for Two Hidden Layers                                                                                                   %%%\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
-\
-\
-%% 1- import just one of the following data %%\
-\
-AAW=importdata('WRIMallDATA30patternsMotorA.mat'); % This is data A, wound rotor induction motor, 30 patterns, 1 second.\
-%AAW=importdata('WRIMallDATA40patternsMotorAandB.mat');  %This is data A and B, wound rotor induction motors, 40 patterns, 1 second\
-%AAW=importdata('SCIMallDATA30patternsMotorC.mat'); % squirrel cage induction motor, 30 patterns, 1 second.\
-%AAW=importdata('DATAmotorA68patterns500msecond.mat');\
-\
-format long\
-[m,L] = size(AAW);\
-AAZ= AAW(:,1:L-1);\
-AAQ=AAW(:,L);\
-\
-[m,L] = size(AAZ);\
-T = 1; %\
-Fa= 60; % the fundamental frequency\
-\
-%%%%%%%%%%%%%%%%%%%%%%%\
-%%%%% set up the windows%%%%%%%%\
-%%%%%%%%%%%%%%%%%%%%%%%\
-\
-\
-Fbr= 73;	% this is for 3rdW\
-Fcr= 73; 	% this is for 5thW\
-Fdr= 73;	% this is for 7thW\
-Fer= 73;	% this is for 9thW\
-Ffr= 73;	% this is for 11thW\
-Fgr= 73;	% this is for 13thW\
-Fhr= 73;	% this is for 15thW\
-\
-% you can change these windows as you like, remember that optimal widths are :\
-% Fbr= 17; Fcr= 29; Fdr= 29; Fer= 44; Ffr= 58; Fgr= 58; Fhr= 73; see Table 5.4.\
-\
-\
-%%How many peaks for each harmonics you want as inputs for ANN?\
-pi=2;\
-\
-%%%%%%%%%%%%%%%%%%%%%%%\
-%%%%% set up the ANN%%%%%%%%\
-%%%%%%%%%%%%%%%%%%%%%%%\
-\
-\
-hidden_neurons = 22;\
-se_hidden_neurons= 7;\
-epochs = 4000;\
-\
-\
-%%%%%%%%%%%%%%%%%%%%%%%\
-%%%%% START%%%%%%%%%%%%%%\
-%%%%%%%%%%%%%%%%%%%%%%%\
-\
-%% The following steps are for the FFT and the tracking algorithm %%\
-\
-% make loop from 1 to m\
-for i=1:m;\
-\
-Volt=AAZ(i,:);\
-L=length(Volt);\
-N=L;\
-Fs=N/T;\
-e=1/Fs;\
-t=[0:e:T-e];\
-nfft=L; % some time it is chosen to be 1024;\
-Yk=fft(Volt,nfft);\
-Yk=Yk(1:nfft/2);\
-f=[0:1:nfft/2-1]*Fs/nfft;\
-absYk = abs(Yk);\
-magYk1 = abs(Yk);\
-%plot(f, magYk1); % stem(f, absYk);\
-% tracking Algorithm\
-[Ma,Ia] = max(magYk1);\
-Fa=Ia-1;\
-Fb=3 *Fa;\
-Fc=5 * Fa;\
-Fd=7 * Fa;\
-Fe=9 * Fa;\
-Ff=11 * Fa;\
-Fg=13 * Fa;\
-Fh=15 * Fa;\
-X= magYk1';\
-%=======\
-Fbl= Fb - Fbr;\
-Fbl = floor(Fbl);\
-Fbh = Fb+1;\
-Xb = X(Fbl:Fbh);\
-[Bb,Ib]=sort(Xb);\
-Ib=flipud(Ib);\
-Ib = (Fbl-2)+Ib;\
-Ib=Ib(Ib~=Fb);\
-Ib=Ib';\
-%==========\
-Fcl = Fc - Fcr;\
-Fcl = floor(Fcl);\
-Fch = Fc+1;\
-Xc = X(Fcl:Fch);\
-[Bc,Ic]=sort(Xc);\
-Ic=flipud(Ic);\
-Ic = (Fcl-2)+Ic;\
-Ic=Ic(Ic~=Fc);\
-Ic=Ic';\
-%=========\
-Fdl = Fd-Fdr;\
-Fdh= Fd+1;\
-Xd = X(Fdl: Fdh);\
-[Bd,Id]=sort(Xd);\
-Id=flipud(Id);\
-Id = (Fdl-2)+Id;\
-Id=Id(Id~=Fd);\
-Id=Id';\
-%=========\
-Fel = Fe-Fer;\
-Feh= Fe+1;\
-Xe = X(Fel: Feh);\
-[Be,Ie]=sort(Xe);\
-Ie=flipud(Ie);\
-Ie = (Fel-2)+Ie;\
-Ie=Ie(Ie~=Fe);\
-Ie=Ie';\
-%=========\
-Ffl = Ff-Ffr;\
-Ffh= Ff+1;\
-Xf = X(Ffl: Ffh);\
-[Bf,If]=sort(Xf);\
-If=flipud(If);\
-If = (Ffl-2)+If;\
-If=If(If~=Ff);\
-If=If';\
-%=========\
-Fgl = Fg-Fgr;\
-Fgh= Fg+1;\
-Xg = X(Fgl: Fgh);\
-[Bg,Ig]=sort(Xg);\
-Ig=flipud(Ig);\
-Ig = (Fgl-2)+Ig;\
-Ig=Ig(Ig~=Fg);\
-Ig=Ig';\
-%=========\
-Fhl = Fh-Fhr;\
-Fhh= Fh+1;\
-Xh = X(Fhl: Fhh);\
-[Bh,Ih]=sort(Xh);\
-Ih=flipud(Ih);\
-Ih = (Fhl-2)+Ih;\
-Ih=Ih(Ih~=Fh);\
-Ih=Ih';\
-%====\
-\
-\
-\
-Ib = Ib(1:pi);\
-Ib = Fb - Ib;\
-\
-Ic = Ic(1:pi);\
-Ic = Fc - Ic;\
-\
-\
-Id = Id(1:pi);\
-Id = Fd - Id;\
-\
-\
-Ie = Ie(1:pi);\
-Ie = Fe - Ie;\
-\
-If = If(1:pi);\
-If = Ff - If;\
-\
-Ig = Ig(1:pi);\
-Ig = Fg - Ig;\
-\
-Ih = Ih(1:pi);\
-Ih = Fh - Ih;\
-\
-%=======\
-AT=[Ib Ic Id Ie If Ig Ih];\
-\
-AAT(i,:)=AT;\
-\
-end\
-\
-%======\
-Data_all=[AAT AAQ];\
-%Data_all=flipud(Data_all);\
-%===================\
-\
-[m,L] = size(Data_all);\
-\
-Mtest=floor(0.3*m);\
-Mtrain=m - Mtest;\
-\
-AAX=zeros(Mtrain,L); %train data\
-AAY=zeros(Mtest,L); %test data\
-\
-%=========\
-\
-p=1;\
-for i=1: Mtest;\
-Di(i)=p+3;\
-p=Di(i);\
-end\
-\
-%======\
-\
-j=1;\
-z=1;\
-for i=1: m;	\
-	if any(Di==i)\
-	    AAY(z,:)= Data_all(i,:);\
-	    z=z+1;	\
-	else\
-	   AAX(j,:)=Data_all(i,:);\
-	   j=j+1;\
-	end\
-end\
-\
-\
-\
-%%%%%%%%%%%%%%%%%%%%%%%\
-%%%%% ANN Code %%%%%%%%%%%%\
-%%%%%%%%%%%%%%%%%%%%%%%\
-\
-\
-% Now we can implement ANN\
-\
-data_in=AAX(:,1:L-1);\
-dtat_out= AAX(:,L);\
-data_in=data_in'; \
-dtat_out=dtat_out';\
-Input_A=data_in;\
-Output_A=dtat_out;\
-\
-test_data_in= AAY(:,1:L-1);\
-test_dtat_out= AAY(:,L);\
-\
-\
-min_Input_A=0; % assuming the minimum inputt\
-max_Input_A=Fhr+15; % assuming the maximum input change it to 50 for squirrel cage data\
-new_min_input= 0;\
-new_max_input= 1;\
-slop_input=(new_max_input-new_min_input)/(max_Input_A-min_Input_A);\
-c_input= new_min_input-(slop_input*min_Input_A);\
-\
-% now we are doing normalization for the output data\
-min_output_A=0; % assuming the minimum output\
-max_output_A=1900; % assuming the maximum output\
-new_min_output= -1;\
-new_max_output= 1;\
-slop_output=(new_max_output-new_min_output)/(max_output_A-min_output_A);\
-c_ouput= new_min_output-(slop_output* min_output_A);\
-\
-%==== thirded stage\
-% now we find the new input and output after normalization\
-new_Input_A= slop_input.*Input_A+c_input;\
-new_output_A=slop_output.*Output_A+c_ouput;\
-\
-\
-%====== fourth stage\
-% train the data\
-train_inp=new_Input_A';\
-train_out=new_output_A';\
-\
-\
-patterns = size(train_inp,1);\
-%add a bias as an input\
-bias = ones(patterns,1);\
-train_inp = [train_inp bias];\
-inputs = size(train_inp,2); % this is the number of input\
-\
-\
-\
-\
-\
-\
-Test=test_data_in;\
-K=size(Test);\
-K=K(1,1);\
-Test_new=slop_input.* Test +c_input;\
-bias = ones(K,1);\
-Test_new=[Test_new bias];\
-\
-\
-\
-\
-\
-\
-\
-%add button for early stopping\
-hstop = uicontrol('Style','PushButton','String','Stop', 'Position', [5 5 70 20],'callback','earlystop = 1;'); \
-earlystop = 0;\
-\
-%add button for resetting weights\
-hreset = uicontrol('Style','PushButton','String','Reset Wts', 'Position', get(hstop,'position')+[75 0 0 0],'callback','reset = 1;'); \
-reset = 0;\
-\
-%add slider to adjust the learning rate\
-hlr = uicontrol('Style','slider','value',.1,'Min',.01,'Max',1,'SliderStep',[0.01 0.1],'Position', get(hreset,'position')+[75 0 100 0]);\
-\
-\
-\
-% ---------- set weights -----------------\
-%set initial random weights\
-N_y=1; % output neurons\
-weight_input_hidden = (randn(hidden_neurons,inputs) - 0.5)/10;\
-weight_se_input_hidden = (randn(se_hidden_neurons,hidden_neurons) - 0.5)/10;\
-weight_hidden_output = (randn(N_y,se_hidden_neurons) - 0.5)/10;\
-\
-\
-for iter = 1:epochs\
-    \
-\
-    %get the learning rate from the slider\
-    alr = 1;     % learning rate for hidden layers\
-    blr = 0.002;   % learning rate for output layer\
-    \
-    %loop through the patterns, selecting randomly\
-    for j = 1:patterns\
-        \
-        \
-       \
-        %set the current pattern\
-        this_pat = train_inp(j,:);\
-        act = train_out(j,1);\
-\
-        Fi_hval = (tanh(this_pat*weight_input_hidden'));\
-        hval = (tanh(Fi_hval* weight_se_input_hidden'));\
-        pred = hval*weight_hidden_output';\
-        error = pred - act;\
-\
-        % adjust weight hidden - output\
-        delta_HO = error .*(1); \
-        delta_se_IO = ((delta_HO*weight_hidden_output).*(1-(hval.^2)));\
-        delta_IH= ((delta_se_IO* weight_se_input_hidden).*(1-(Fi_hval.^2)));\
-\
-        weight_hidden_output = weight_hidden_output - blr.*(delta_HO* hval);\
-        weight_se_input_hidden = weight_se_input_hidden - (alr.*(delta_se_IO'* Fi_hval));\
-        % adjust the weights input - hidden \
-        \
-        weight_input_hidden = weight_input_hidden - (alr.*(delta_IH'*this_pat));\
-        \
-    end\
-    % -- another epoch finished\
-    \
-    %plot overall network error at end of each epoch\
-    pred = (tanh((tanh(train_inp*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';\
-    error = pred - train_out;\
-    err(iter) =  (sum(error.^2))^0.5;\
-    \
-    figure(1);\
-    plot(err)\
-    \
-    \
-    %reset weights if requested\
-    if reset\
-         weight_input_hidden = (randn(hidden_neurons,inputs) - 0.5)/10;\
-        weight_se_input_hidden = (randn(se_hidden_neurons,hidden_neurons) - 0.5)/10;\
-        weight_hidden_output = (randn(N_y,se_hidden_neurons) - 0.5)/10;\
-\
-        fprintf('weights reaset after %d epochs\\n',iter);\
-        reset = 0;\
-    end\
-    \
-    %stop if requested\
-    if earlystop\
-        fprintf('stopped at epoch: %d\\n',iter); \
-        break \
-    end \
-\
-\
-    %stop if error is small\
-    if err(iter) < 0.002\
-        fprintf('converged at epoch: %d\\n',iter);\
-        break \
-   end\
-\
-%add a condition that measure the error of test data\
-	ANN_output_pred = (pred - c_ouput)/slop_output;\
-	Diff=dtat_out' -ANN_output_pred;\
-           errtr(iter) =  (sum(Diff.^2))^0.5;\
-\
-	ANN_output_Test = (tanh((tanh(Test_new*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';\
-	ANN_output_Test = (ANN_output_Test - c_ouput)/slop_output;\
-	test_diff= test_dtat_out - ANN_output_Test;\
-	errt(iter) =  (sum(test_diff.^2))^0.5;\
-\
-	%stop if vadilation error is small\
-	vs=0;\
-	if errt(iter) < 7  % 8.5 for 3 RPM Diff,    or 5.6 for 2 RPM Diff\
-	      if errtr(iter) < 7\
-	      vs=1;\
-	      end\
-	end\
-\
-	if vs==1\
-	fprintf('converged at epoch: %d\\n',iter);\
-           break \
-	end\
-\
-	%let vi=0;\
-	vi=0;\
-\
-	if (mean(abs(test_diff))) < 2.1\
-		if  (mean(abs(Diff))) < 1.7\
-		vi=1;\
-		end\
-	end\
-	\
-	if vi==1\
-	           fprintf('stopped at epoch: %d\\n',iter); \
-	          break\
-	end\
-\
-\
-end\
-\
-	pred = (tanh((tanh(train_inp*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';\
-	ANN_output_pred = (pred - c_ouput)/slop_output;\
-	Diff=dtat_out' -ANN_output_pred;\
-\
-\
-	ANN_output_Test = (tanh((tanh(Test_new*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';\
-	ANN_output_Test = (ANN_output_Test - c_ouput)/slop_output;\
-	test_diff= test_dtat_out - ANN_output_Test;\
-\
-	AAARr=[dtat_out' ANN_output_pred];\
-	AAATr=[test_dtat_out ANN_output_Test];\
-\
-P1= scatter(dtat_out, Diff,'b','LineWidth',1.2);\
-hold on\
-P2=scatter(test_dtat_out, test_diff,'r','LineWidth',1.2);\
-\
-legend([P1,P2],' Error  from Training Data',' Error  from Testing Data');}
+
+%% 1- import just one of the following data %%
+
+AAW=importdata('WRIMallDATA30patternsMotorA.mat'); % This is data A, wound rotor induction motor, 30 patterns, 1 second.
+%AAW=importdata('WRIMallDATA40patternsMotorAandB.mat');  %This is data A and B, wound rotor induction motors, 40 patterns, 1 second
+%AAW=importdata('SCIMallDATA30patternsMotorC.mat'); % squirrel cage induction motor, 30 patterns, 1 second.
+%AAW=importdata('DATAmotorA68patterns500msecond.mat');
+
+format long
+[m,L] = size(AAW);
+AAZ= AAW(:,1:L-1);
+AAQ=AAW(:,L);
+
+[m,L] = size(AAZ);
+T = 1; %
+Fa= 60; % the fundamental frequency
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% set up the windows%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+
+Fbr= 73;	% this is for 3rdW
+Fcr= 73; 	% this is for 5thW
+Fdr= 73;	% this is for 7thW
+Fer= 73;	% this is for 9thW
+Ffr= 73;	% this is for 11thW
+Fgr= 73;	% this is for 13thW
+Fhr= 73;	% this is for 15thW
+
+% you can change these windows as you like, remember that optimal widths are :
+% Fbr= 17; Fcr= 29; Fdr= 29; Fer= 44; Ffr= 58; Fgr= 58; Fhr= 73; see Table 5.4.
+
+
+%%How many peaks for each harmonics you want as inputs for ANN?
+pi=2;
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% set up the ANN%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+
+hidden_neurons = 22;
+se_hidden_neurons= 7;
+epochs = 4000;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% START%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%% The following steps are for the FFT and the tracking algorithm %%
+
+% make loop from 1 to m
+for i=1:m;
+
+Volt=AAZ(i,:);
+L=length(Volt);
+N=L;
+Fs=N/T;
+e=1/Fs;
+t=[0:e:T-e];
+nfft=L; % some time it is chosen to be 1024;
+Yk=fft(Volt,nfft);
+Yk=Yk(1:nfft/2);
+f=[0:1:nfft/2-1]*Fs/nfft;
+absYk = abs(Yk);
+magYk1 = abs(Yk);
+%plot(f, magYk1); % stem(f, absYk);
+% tracking Algorithm
+[Ma,Ia] = max(magYk1);
+Fa=Ia-1;
+Fb=3 *Fa;
+Fc=5 * Fa;
+Fd=7 * Fa;
+Fe=9 * Fa;
+Ff=11 * Fa;
+Fg=13 * Fa;
+Fh=15 * Fa;
+X= magYk1';
+%=======
+Fbl= Fb - Fbr;
+Fbl = floor(Fbl);
+Fbh = Fb+1;
+Xb = X(Fbl:Fbh);
+[Bb,Ib]=sort(Xb);
+Ib=flipud(Ib);
+Ib = (Fbl-2)+Ib;
+Ib=Ib(Ib~=Fb);
+Ib=Ib';
+%==========
+Fcl = Fc - Fcr;
+Fcl = floor(Fcl);
+Fch = Fc+1;
+Xc = X(Fcl:Fch);
+[Bc,Ic]=sort(Xc);
+Ic=flipud(Ic);
+Ic = (Fcl-2)+Ic;
+Ic=Ic(Ic~=Fc);
+Ic=Ic';
+%=========
+Fdl = Fd-Fdr;
+Fdh= Fd+1;
+Xd = X(Fdl: Fdh);
+[Bd,Id]=sort(Xd);
+Id=flipud(Id);
+Id = (Fdl-2)+Id;
+Id=Id(Id~=Fd);
+Id=Id';
+%=========
+Fel = Fe-Fer;
+Feh= Fe+1;
+Xe = X(Fel: Feh);
+[Be,Ie]=sort(Xe);
+Ie=flipud(Ie);
+Ie = (Fel-2)+Ie;
+Ie=Ie(Ie~=Fe);
+Ie=Ie';
+%=========
+Ffl = Ff-Ffr;
+Ffh= Ff+1;
+Xf = X(Ffl: Ffh);
+[Bf,If]=sort(Xf);
+If=flipud(If);
+If = (Ffl-2)+If;
+If=If(If~=Ff);
+If=If';
+%=========
+Fgl = Fg-Fgr;
+Fgh= Fg+1;
+Xg = X(Fgl: Fgh);
+[Bg,Ig]=sort(Xg);
+Ig=flipud(Ig);
+Ig = (Fgl-2)+Ig;
+Ig=Ig(Ig~=Fg);
+Ig=Ig';
+%=========
+Fhl = Fh-Fhr;
+Fhh= Fh+1;
+Xh = X(Fhl: Fhh);
+[Bh,Ih]=sort(Xh);
+Ih=flipud(Ih);
+Ih = (Fhl-2)+Ih;
+Ih=Ih(Ih~=Fh);
+Ih=Ih';
+%====
+
+
+
+Ib = Ib(1:pi);
+Ib = Fb - Ib;
+
+Ic = Ic(1:pi);
+Ic = Fc - Ic;
+
+
+Id = Id(1:pi);
+Id = Fd - Id;
+
+
+Ie = Ie(1:pi);
+Ie = Fe - Ie;
+
+If = If(1:pi);
+If = Ff - If;
+
+Ig = Ig(1:pi);
+Ig = Fg - Ig;
+
+Ih = Ih(1:pi);
+Ih = Fh - Ih;
+
+%=======
+AT=[Ib Ic Id Ie If Ig Ih];
+
+AAT(i,:)=AT;
+
+end
+
+%======
+Data_all=[AAT AAQ];
+%Data_all=flipud(Data_all);
+%===================
+
+[m,L] = size(Data_all);
+
+Mtest=floor(0.3*m);
+Mtrain=m - Mtest;
+
+AAX=zeros(Mtrain,L); %train data
+AAY=zeros(Mtest,L); %test data
+
+%=========
+
+p=1;
+for i=1: Mtest;
+Di(i)=p+3;
+p=Di(i);
+end
+
+%======
+
+j=1;
+z=1;
+for i=1: m;	
+	if any(Di==i)
+	    AAY(z,:)= Data_all(i,:);
+	    z=z+1;	
+	else
+	   AAX(j,:)=Data_all(i,:);
+	   j=j+1;
+	end
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% ANN Code %%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% Now we can implement ANN
+
+data_in=AAX(:,1:L-1);
+dtat_out= AAX(:,L);
+data_in=data_in'; 
+dtat_out=dtat_out';
+Input_A=data_in;
+Output_A=dtat_out;
+
+test_data_in= AAY(:,1:L-1);
+test_dtat_out= AAY(:,L);
+
+
+min_Input_A=0; % assuming the minimum inputt
+max_Input_A=Fhr+15; % assuming the maximum input change it to 50 for squirrel cage data
+new_min_input= 0;
+new_max_input= 1;
+slop_input=(new_max_input-new_min_input)/(max_Input_A-min_Input_A);
+c_input= new_min_input-(slop_input*min_Input_A);
+
+% now we are doing normalization for the output data
+min_output_A=0; % assuming the minimum output
+max_output_A=1900; % assuming the maximum output
+new_min_output= -1;
+new_max_output= 1;
+slop_output=(new_max_output-new_min_output)/(max_output_A-min_output_A);
+c_ouput= new_min_output-(slop_output* min_output_A);
+
+%==== thirded stage
+% now we find the new input and output after normalization
+new_Input_A= slop_input.*Input_A+c_input;
+new_output_A=slop_output.*Output_A+c_ouput;
+
+
+%====== fourth stage
+% train the data
+train_inp=new_Input_A';
+train_out=new_output_A';
+
+
+patterns = size(train_inp,1);
+%add a bias as an input
+bias = ones(patterns,1);
+train_inp = [train_inp bias];
+inputs = size(train_inp,2); % this is the number of input
+
+
+
+
+
+
+Test=test_data_in;
+K=size(Test);
+K=K(1,1);
+Test_new=slop_input.* Test +c_input;
+bias = ones(K,1);
+Test_new=[Test_new bias];
+
+
+
+
+
+
+
+%add button for early stopping
+hstop = uicontrol('Style','PushButton','String','Stop', 'Position', [5 5 70 20],'callback','earlystop = 1;'); 
+earlystop = 0;
+
+%add button for resetting weights
+hreset = uicontrol('Style','PushButton','String','Reset Wts', 'Position', get(hstop,'position')+[75 0 0 0],'callback','reset = 1;'); 
+reset = 0;
+
+%add slider to adjust the learning rate
+hlr = uicontrol('Style','slider','value',.1,'Min',.01,'Max',1,'SliderStep',[0.01 0.1],'Position', get(hreset,'position')+[75 0 100 0]);
+
+
+
+% ---------- set weights -----------------
+%set initial random weights
+N_y=1; % output neurons
+weight_input_hidden = (randn(hidden_neurons,inputs) - 0.5)/10;
+weight_se_input_hidden = (randn(se_hidden_neurons,hidden_neurons) - 0.5)/10;
+weight_hidden_output = (randn(N_y,se_hidden_neurons) - 0.5)/10;
+
+
+for iter = 1:epochs
+    
+
+    %get the learning rate from the slider
+    alr = 1;     % learning rate for hidden layers
+    blr = 0.002;   % learning rate for output layer
+    
+    %loop through the patterns, selecting randomly
+    for j = 1:patterns
+        
+        
+       
+        %set the current pattern
+        this_pat = train_inp(j,:);
+        act = train_out(j,1);
+
+        Fi_hval = (tanh(this_pat*weight_input_hidden'));
+        hval = (tanh(Fi_hval* weight_se_input_hidden'));
+        pred = hval*weight_hidden_output';
+        error = pred - act;
+
+        % adjust weight hidden - output
+        delta_HO = error .*(1); 
+        delta_se_IO = ((delta_HO*weight_hidden_output).*(1-(hval.^2)));
+        delta_IH= ((delta_se_IO* weight_se_input_hidden).*(1-(Fi_hval.^2)));
+
+        weight_hidden_output = weight_hidden_output - blr.*(delta_HO* hval);
+        weight_se_input_hidden = weight_se_input_hidden - (alr.*(delta_se_IO'* Fi_hval));
+        % adjust the weights input - hidden 
+        
+        weight_input_hidden = weight_input_hidden - (alr.*(delta_IH'*this_pat));
+        
+    end
+    % -- another epoch finished
+    
+    %plot overall network error at end of each epoch
+    pred = (tanh((tanh(train_inp*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';
+    error = pred - train_out;
+    err(iter) =  (sum(error.^2))^0.5;
+    
+    figure(1);
+    plot(err)
+    
+    
+    %reset weights if requested
+    if reset
+         weight_input_hidden = (randn(hidden_neurons,inputs) - 0.5)/10;
+        weight_se_input_hidden = (randn(se_hidden_neurons,hidden_neurons) - 0.5)/10;
+        weight_hidden_output = (randn(N_y,se_hidden_neurons) - 0.5)/10;
+
+        fprintf('weights reaset after %d epochs\n',iter);
+        reset = 0;
+    end
+    
+    %stop if requested
+    if earlystop
+        fprintf('stopped at epoch: %d\n',iter); 
+        break 
+    end 
+
+
+    %stop if error is small
+    if err(iter) < 0.002
+        fprintf('converged at epoch: %d\n',iter);
+        break 
+   end
+
+%add a condition that measure the error of test data
+	ANN_output_pred = (pred - c_ouput)/slop_output;
+	Diff=dtat_out' -ANN_output_pred;
+           errtr(iter) =  (sum(Diff.^2))^0.5;
+
+	ANN_output_Test = (tanh((tanh(Test_new*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';
+	ANN_output_Test = (ANN_output_Test - c_ouput)/slop_output;
+	test_diff= test_dtat_out - ANN_output_Test;
+	errt(iter) =  (sum(test_diff.^2))^0.5;
+
+	%stop if vadilation error is small
+	vs=0;
+	if errt(iter) < 7  % 8.5 for 3 RPM Diff,    or 5.6 for 2 RPM Diff
+	      if errtr(iter) < 7
+	      vs=1;
+	      end
+	end
+
+	if vs==1
+	fprintf('converged at epoch: %d\n',iter);
+           break 
+	end
+
+	%let vi=0;
+	vi=0;
+
+	if (mean(abs(test_diff))) < 2.1
+		if  (mean(abs(Diff))) < 1.7
+		vi=1;
+		end
+	end
+	
+	if vi==1
+	           fprintf('stopped at epoch: %d\n',iter); 
+	          break
+	end
+
+
+end
+
+	pred = (tanh((tanh(train_inp*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';
+	ANN_output_pred = (pred - c_ouput)/slop_output;
+	Diff=dtat_out' -ANN_output_pred;
+
+
+	ANN_output_Test = (tanh((tanh(Test_new*weight_input_hidden'))* weight_se_input_hidden'))*weight_hidden_output';
+	ANN_output_Test = (ANN_output_Test - c_ouput)/slop_output;
+	test_diff= test_dtat_out - ANN_output_Test;
+
+	AAARr=[dtat_out' ANN_output_pred];
+	AAATr=[test_dtat_out ANN_output_Test];
+
+P1= scatter(dtat_out, Diff,'b','LineWidth',1.2);
+hold on
+P2=scatter(test_dtat_out, test_diff,'r','LineWidth',1.2);
+
+legend([P1,P2],' Error  from Training Data',' Error  from Testing Data');
